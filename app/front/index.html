@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="es" class="h-full dark">
 
 <head>
     <meta charset="UTF-8">
@@ -107,28 +107,6 @@
                         <option value="es">Español</option>
                         <option value="en">English</option>
                     </select>
-                </div>
-
-                <!-- Selector de Tema -->
-                <div>
-                    <label
-                        class="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-2">
-                        <i data-lucide="moon"
-                            class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 pointer-events-none"></i>
-                        <span data-i18n="themeLabel">Tema</span>
-                    </label>
-                    <div class="grid grid-cols-2 gap-1.5 bg-slate-200/80 dark:bg-slate-800/80 p-1 rounded-xl">
-                        <button id="themeLightBtn"
-                            class="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-white dark:bg-transparent text-slate-900 dark:text-slate-400 shadow-sm dark:shadow-none">
-                            <i data-lucide="sun" class="w-3.5 h-3.5 pointer-events-none"></i>
-                            <span data-i18n="themeLight">Claro</span>
-                        </button>
-                        <button id="themeDarkBtn"
-                            class="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-600 dark:text-white dark:bg-slate-700">
-                            <i data-lucide="moon" class="w-3.5 h-3.5 pointer-events-none"></i>
-                            <span data-i18n="themeDark">Oscuro</span>
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -419,9 +397,6 @@
             es: {
                 settingsTitle: "Ajustes",
                 languageLabel: "Idioma",
-                themeLabel: "Tema",
-                themeLight: "Claro",
-                themeDark: "Oscuro",
                 heroTitle: "Descubre el corazón de tu texto",
                 heroDesc: "Comprende el tono emocional tras las palabras. Clasificación de sentimientos multilingüe rápida mediante modelos NLP Transformer.",
                 inputTitle: "¿Cómo te sientes hoy?",
@@ -445,9 +420,6 @@
             en: {
                 settingsTitle: "Settings",
                 languageLabel: "Language",
-                themeLabel: "Theme",
-                themeLight: "Light",
-                themeDark: "Dark",
                 heroTitle: "Discover the heart of your text",
                 heroDesc: "Understand the emotional tone behind words. Fast, cross-language sentiment classification powered by transformer NLP models.",
                 inputTitle: "How are you feeling today?",
@@ -492,32 +464,7 @@
             }
         });
 
-        // --- 4. CONMUTADOR DE TEMA ---
-        const themeLightBtn = document.getElementById('themeLightBtn');
-        const themeDarkBtn = document.getElementById('themeDarkBtn');
-
-        // BUGFIX (bug 1): antes esta función reescribía a mano el "className"
-        // completo de los dos botones. Esas clases ya estaban originalmente bien
-        // definidas usando los modificadores "dark:" de Tailwind, así que
-        // sobreescribirlas era redundante y frágil (con cada clic las cadenas
-        // podían desincronizarse). Ahora solo se alterna la clase "dark" en
-        // <html>; el propio CSS (dark:bg-transparent, dark:bg-slate-700, etc.)
-        // ya se encarga de resaltar el botón activo en ambos sentidos.
-        function setTheme(isDark) {
-            document.documentElement.classList.toggle('dark', isDark);
-        }
-
-        themeLightBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            setTheme(false);
-        });
-
-        themeDarkBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            setTheme(true);
-        });
-
-        // --- 5. CAMBIO DE IDIOMA ---
+        // --- 4. CAMBIO DE IDIOMA ---
         const langSelect = document.getElementById('langSelect');
 
         // BUGFIX (bug 3): se ha quitado el listener "click -> stopPropagation()"
@@ -558,7 +505,7 @@
             langSelect.value = lang;
         }
 
-        // --- 6. EVENTO ANALIZAR ---
+        // --- 5. EVENTO ANALIZAR ---
         document.getElementById('analyzeBtn').addEventListener('click', () => {
             const text = document.getElementById('sentimentInput').value;
             const dict = translations[currentLang];
