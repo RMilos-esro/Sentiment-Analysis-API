@@ -1,8 +1,12 @@
+from datetime import datetime, timezone
+from sqlalchemy import Integer, String, Float, DateTime
+from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Float, String, Integer
 
 class Base(DeclarativeBase):
     pass
+
+language_enum = ENUM('es', 'en', name='languages', create_type=False)
 
 class SentimentModel(Base):
     __tablename__ = "sentiment"  
@@ -11,4 +15,5 @@ class SentimentModel(Base):
     text: Mapped[str] = mapped_column(String(255))
     sentiment: Mapped[str] = mapped_column(String(50))
     score: Mapped[float] = mapped_column(Float)
-    date: Mapped[str] = mapped_column(String(50))  
+    date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    language: Mapped[str] = mapped_column(language_enum)
