@@ -4,7 +4,7 @@ from huggingface_hub import InferenceClient
 from app.config import HF_TOKEN
 
 DetectorFactory.seed = 0
-client = InferenceClient(token=HF_TOKEN)
+client = InferenceClient(token=HF_TOKEN, provider="hf-inference")
 
 SPANISH_LABEL_MAP = {"POS": "POSITIVE", "NEG": "NEGATIVE", "NEU": "NEUTRAL"}
 

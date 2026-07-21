@@ -1,10 +1,11 @@
 from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import Text, text
 import uvicorn
 from datetime import datetime, timezone
-from app.db.schemas import SentimentCreate
+from app.db.schemas import SentimentResponse
 from app.db.models import SentimentModel
 from app.config import DATABASE_URL 
 from app.db.database import AsyncSessionLocal 
@@ -21,6 +22,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class AnalyzeRequest(BaseModel):
+    text: str
+
 @app.get("/api/health")
 def health_check():
     return {"status": "ok"}
@@ -35,15 +39,14 @@ async def get_history(id:Optional[int] = None):
         rows = result.mappings().all()
         return rows
     
-@app.post("/analyze", response_model=SentimentCreate, status_code=201)
-async def analyze_sentiment(text: str):
-    result = analyze_sentiment_by_lang(text)
+@app.post("/analyze", response_model=SentimentResponse, status_code=201)
+async def analyze_sentiment(payload: AnalyzeRequest):
+    result = analyze_sentiment_by_lang(payload.text)
     if not result['supported']:
         raise HTTPException(status_code=400, detail=result['error'])
-    
-    
+
     resultDB = SentimentModel(
-        text=text,
+        text=payload.text,
         sentiment=result['label'],
         score=result['score'],
         date=datetime.now(timezone.utc),
@@ -56,7 +59,7 @@ async def analyze_sentiment(text: str):
         await session.refresh(resultDB)
 
     return {
-        "text": text,
+        "text": payload.text,
         "sentiment": result['label'],
         "score": result['score'],
         "language": result['language']
