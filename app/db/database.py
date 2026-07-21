@@ -12,11 +12,3 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False
 )
 
-async def test_connection():
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(text("SELECT * FROM sentiment;"))
-        print("¡Conexión exitosa!")
-        print(result.fetchone())
-
-if __name__ == "__main__":
-    asyncio.run(test_connection())
