@@ -6,16 +6,23 @@ from app.config import HF_TOKEN
 DetectorFactory.seed = 0
 client = InferenceClient(token=HF_TOKEN, provider="hf-inference")
 
-SPANISH_LABEL_MAP = {"POS": "POSITIVE", "NEG": "NEGATIVE", "NEU": "NEUTRAL"}
-
-MODEL_ES = "pysentimiento/robertuito-sentiment-analysis"
-MODEL_EN = "distilbert-base-uncased-finetuned-sst-2-english"
+MODEL = "nlptown/bert-base-multilingual-uncased-sentiment"
 
 def detect_language(text: str) -> str:
     try:
         return detect(text)
     except LangDetectException:
         return "unknown"
+
+def stars_to_label(label: str) -> str:
+    
+    stars = int(label[0])
+    if stars <= 2:
+        return "NEGATIVE"
+    elif stars == 3:
+        return "NEUTRAL"
+    else:
+        return "POSITIVE"
 
 def analyze_sentiment_by_lang(text: str) -> dict:
     lang = detect_language(text)
@@ -27,12 +34,9 @@ def analyze_sentiment_by_lang(text: str) -> dict:
             "error": f"'{lang}' not supported. Please send text in English or Spanish."
         }
 
-    model = MODEL_ES if lang == "es" else MODEL_EN
-    result = client.text_classification(text, model=model)[0]  # {"label": ..., "score": ...}
+    result = client.text_classification(text, model=MODEL)[0]  # {"label": "5 stars", "score": ...}
 
-    label = result["label"]
-    if lang == "es" and label in SPANISH_LABEL_MAP:
-        label = SPANISH_LABEL_MAP[label]
+    label = stars_to_label(result["label"])
 
     return {
         "language": lang,
