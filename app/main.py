@@ -9,8 +9,17 @@ from db.models import SentimentModel
 from config import DATABASE_URL 
 from db.database import AsyncSessionLocal 
 from nlp.sentiment import analyze_sentiment_by_lang
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Sentiment Analysis API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/history")

@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiments - Multilingual Sentiment Analysis</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Canvas WebGL de fondo */
+        #emotional-pulse-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Cristal con desenfoque optimizado */
+        .glass-card {
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col justify-between transition-colors duration-300 relative overflow-x-hidden">
+
+    <!-- CANVAS WEBGL PARA EL PULSO EMOCIONAL -->
+    <canvas id="emotional-pulse-canvas"></canvas>
+
+    <!-- Header / Navbar -->
+    <header class="w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between relative z-10">
+
+        <!-- Logo Principal -->
+        <a href="#" class="flex items-center gap-4 group">
+            <div
+                class="relative w-12 h-12 flex items-center justify-center bg-gradient-to-tr from-indigo-700 via-purple-700 to-indigo-600 rounded-2xl shadow-xl shadow-indigo-500/25 group-hover:scale-105 transition-transform duration-300">
+                <svg class="w-8 h-8 text-white" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="10" width="32" height="28" rx="5" stroke="currentColor" stroke-width="3" />
+                    <line x1="16" y1="18" x2="16" y2="30" stroke="currentColor" stroke-width="3"
+                        stroke-linecap="round" />
+                    <line x1="22" y1="18" x2="22" y2="30" stroke="currentColor" stroke-width="3"
+                        stroke-linecap="round" />
+                    <line x1="28" y1="18" x2="28" y2="30" stroke="currentColor" stroke-width="3"
+                        stroke-linecap="round" />
+                    <circle cx="24" cy="24" r="14" stroke="#c084fc" stroke-width="1.5" opacity="0.6" />
+                    <circle cx="24" cy="24" r="11" stroke="#e9d5ff" stroke-width="1.5" opacity="0.4" />
+                    <path
+                        d="M24 16C24 19.9706 27.9706 24 32 24C27.9706 24 24 28.0294 24 32C24 28.0294 20.0294 24 16 24C20.0294 24 24 19.9706 24 16Z"
+                        fill="#e9d5ff" />
+                </svg>
+            </div>
+
+            <div class="flex flex-col">
+                <span
+                    class="text-2xl font-black tracking-tight text-slate-950 dark:text-white leading-none group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    Sentiments<span class="text-indigo-600 dark:text-indigo-400">.</span>
+                </span>
+            </div>
+        </a>
+
+        <!-- Controles Derecha -->
+        <div class="flex items-center gap-1 relative">
+            <!-- Botón Settings (se añade pointer-events-none al icono para fijar la zona de click) -->
+            <button id="settingsBtn"
+                class="text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white transition-colors p-2.5 rounded-xl bg-white/60 dark:bg-slate-900/60 hover:bg-white/90 dark:hover:bg-slate-800/80 border border-slate-200/60 dark:border-slate-800/80 backdrop-blur-md shadow-sm">
+                <i data-lucide="settings" class="w-5 h-5 pointer-events-none"></i>
+            </button>
+
+            <!-- Menú Desplegable de Ajustes -->
+            <div id="settingsMenu"
+                class="hidden absolute right-0 top-14 w-64 bg-white/95 dark:bg-slate-900/95 glass-card rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-4 z-50 transition-all">
+                <div class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 px-1"
+                    data-i18n="settingsTitle">
+                    Ajustes
+                </div>
+
+                <!-- Selector de Idioma -->
+                <div class="mb-4">
+                    <label
+                        class="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-2">
+                        <i data-lucide="globe"
+                            class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 pointer-events-none"></i>
+                        <span data-i18n="languageLabel">Idioma</span>
+                    </label>
+                    <select id="langSelect"
+                        class="w-full bg-slate-100 dark:bg-slate-800/90 border border-slate-300/80 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                        <option value="es">Español</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+
+                <!-- Selector de Tema -->
+                <div>
+                    <label
+                        class="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-2">
+                        <i data-lucide="moon"
+                            class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 pointer-events-none"></i>
+                        <span data-i18n="themeLabel">Tema</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-1.5 bg-slate-200/80 dark:bg-slate-800/80 p-1 rounded-xl">
+                        <button id="themeLightBtn"
+                            class="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-white dark:bg-transparent text-slate-900 dark:text-slate-400 shadow-sm dark:shadow-none">
+                            <i data-lucide="sun" class="w-3.5 h-3.5 pointer-events-none"></i>
+                            <span data-i18n="themeLight">Claro</span>
+                        </button>
+                        <button id="themeDarkBtn"
+                            class="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-600 dark:text-white dark:bg-slate-700">
+                            <i data-lucide="moon" class="w-3.5 h-3.5 pointer-events-none"></i>
+                            <span data-i18n="themeDark">Oscuro</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón Ayuda -->
+            <button
+                class="text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white transition-colors p-2.5 rounded-xl bg-white/60 dark:bg-slate-900/60 hover:bg-white/90 dark:hover:bg-slate-800/80 border border-slate-200/60 dark:border-slate-800/80 backdrop-blur-md shadow-sm">
+                <i data-lucide="help-circle" class="w-5 h-5 pointer-events-none"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="w-full max-w-5xl mx-auto px-6 py-8 flex-grow relative z-10">
+
+        <!-- Hero Section -->
+        <section class="text-center max-w-2xl mx-auto mb-10">
+            <h1 class="text-4xl md:text-5xl font-black text-slate-950 dark:text-white tracking-tight mb-4 leading-tight"
+                data-i18n="heroTitle">
+                Descubre el corazón de tu texto
+            </h1>
+            <p class="text-slate-700 dark:text-slate-300 font-medium text-sm md:text-base leading-relaxed"
+                data-i18n="heroDesc">
+                Comprende el tono emocional tras las palabras. Clasificación de sentimientos multilingüe rápida mediante
+                modelos NLP Transformer.
+            </p>
+        </section>
+
+        <!-- Área de Entrada de Texto -->
+        <section
+            class="bg-white/85 dark:bg-slate-900/85 glass-card rounded-3xl p-6 md:p-8 shadow-2xl shadow-indigo-500/10 border border-white dark:border-slate-800 mb-12 max-w-3xl mx-auto transition-all">
+            <h2 class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-3"
+                data-i18n="inputTitle">
+                ¿Cómo te sientes hoy?
+            </h2>
+            <div class="relative">
+                <textarea id="sentimentInput" rows="5"
+                    class="w-full bg-slate-100/90 dark:bg-slate-950/70 backdrop-blur-sm rounded-2xl p-4 text-slate-900 dark:text-slate-100 font-medium text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 border border-slate-200/80 dark:border-slate-800 resize-none transition-all"
+                    data-i18n-placeholder="inputPlaceholder" placeholder="Pega tu texto aquí..."></textarea>
+            </div>
+
+            <div class="mt-6 flex justify-center">
+                <button id="analyzeBtn"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-3.5 rounded-full flex items-center gap-2.5 shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                    <i data-lucide="sparkles" class="w-4 h-4 pointer-events-none"></i>
+                    <span data-i18n="btnAnalyze">Analizar Sentimiento</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Cuadrícula de Características -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+
+            <!-- Análisis Multilingüe NLP -->
+            <div
+                class="md:col-span-2 bg-white/80 dark:bg-slate-900/80 glass-card border border-white dark:border-slate-800 rounded-3xl p-8 relative overflow-hidden min-h-[200px] flex flex-col justify-between transition-all shadow-xl shadow-indigo-500/5">
+                <div class="max-w-sm z-10">
+                    <h3 class="text-lg font-extrabold text-slate-950 dark:text-white mb-2" data-i18n="feat1Title">
+                        Análisis Multilingüe</h3>
+                    <p class="text-xs font-medium text-slate-700 dark:text-slate-300 leading-relaxed"
+                        data-i18n="feat1Desc">
+                        Detección automática de idioma combinada con modelos Transformer ajustados (RoBERTuito y
+                        DistilBERT) para la precisión en inglés y español.
+                    </p>
+                </div>
+                <div class="absolute right-4 bottom-4 opacity-40 dark:opacity-60">
+                    <svg width="180" height="100" viewBox="0 0 180 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 80 L60 30 L100 60 L150 10" stroke="#6366f1" stroke-width="8" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <circle cx="10" cy="80" r="10" fill="#6366f1" />
+                        <circle cx="60" cy="30" r="10" fill="#6366f1" />
+                        <circle cx="100" cy="60" r="10" fill="#6366f1" />
+                        <circle cx="150" cy="10" r="10" fill="#6366f1" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Privacidad y Anonimato -->
+            <div
+                class="bg-indigo-600 dark:bg-indigo-700 glass-card text-white rounded-3xl p-8 flex flex-col justify-between min-h-[200px] shadow-xl shadow-indigo-600/25 border border-indigo-400/30">
+                <div>
+                    <div
+                        class="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center mb-6">
+                        <i data-lucide="shield-check" class="w-5 h-5 text-white pointer-events-none"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-1" data-i18n="feat2Title">100% Anónimo</h3>
+                    <p class="text-xs text-indigo-50 font-medium leading-relaxed" data-i18n="feat2Desc">
+                        Guardamos muestras de texto para mejorar la calidad del análisis, pero nunca rastreamos
+                        direcciones IP ni metadatos personales.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Tiempo Real -->
+            <div
+                class="bg-white/80 dark:bg-slate-900/80 glass-card border border-white dark:border-slate-800 rounded-3xl p-8 flex flex-col justify-between min-h-[200px] transition-all shadow-xl shadow-indigo-500/5">
+                <div
+                    class="w-10 h-10 rounded-full bg-indigo-500/15 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                    <i data-lucide="gauge" class="w-5 h-5 pointer-events-none"></i>
+                </div>
+                <div class="text-center mt-6">
+                    <h3 class="text-lg font-extrabold text-slate-950 dark:text-white mb-1" data-i18n="feat3Title">
+                        Pipeline en Tiempo Real</h3>
+                    <p class="text-xs font-medium text-slate-700 dark:text-slate-300" data-i18n="feat3Desc">Inferencia
+                        en GPU/CPU en menos de un segundo.</p>
+                </div>
+            </div>
+
+            <!-- Tarjeta Visual (Encuentra tu Calma) -->
+            <div
+                class="md:col-span-2 relative rounded-3xl overflow-hidden min-h-[200px] flex items-end p-8 group border border-white/60 dark:border-slate-800 shadow-xl">
+                <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1000&auto=format&fit=crop&q=80"
+                    alt="Mountains landscape"
+                    class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent"></div>
+
+                <div class="relative z-10 text-white">
+                    <h3 class="text-lg font-bold mb-1" data-i18n="feat4Title">Encuentra la calma</h3>
+                    <p class="text-xs text-slate-200 font-medium" data-i18n="feat4Desc">Análisis objetivo para tu
+                        tranquilidad mental.</p>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer
+        class="w-full border-t border-slate-300/60 dark:border-slate-800/80 bg-white/60 dark:bg-slate-950/60 glass-card backdrop-blur-md mt-12 transition-colors relative z-10">
+        <div
+            class="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-700 dark:text-slate-400">
+
+            <a href="#" class="flex items-center gap-2.5">
+                <div
+                    class="w-6 h-6 rounded-lg bg-gradient-to-tr from-indigo-700 to-purple-700 flex items-center justify-center text-white">
+                    <svg class="w-4 h-4" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="8" y="10" width="32" height="28" rx="5" stroke="currentColor" stroke-width="4" />
+                        <path
+                            d="M24 16C24 19.9706 27.9706 24 32 24C27.9706 24 24 28.0294 24 32C24 28.0294 20.0294 24 16 24C20.0294 24 24 19.9706 24 16Z"
+                            fill="#e9d5ff" />
+                    </svg>
+                </div>
+                <span class="font-black text-slate-950 dark:text-white text-sm">Sentiments</span>
+            </a>
+
+            <div class="flex flex-wrap items-center gap-6">
+                <a href="#" class="hover:text-indigo-600 dark:hover:text-white transition-colors"
+                    data-i18n="linkPrivacy">Política de Privacidad</a>
+                <a href="#" class="hover:text-indigo-600 dark:hover:text-white transition-colors"
+                    data-i18n="linkTerms">Términos de Servicio</a>
+                <a href="#" class="hover:text-indigo-600 dark:hover:text-white transition-colors"
+                    data-i18n="linkDocs">Documentación API</a>
+                <a href="#" class="hover:text-indigo-600 dark:hover:text-white transition-colors"
+                    data-i18n="linkContact">Contacto</a>
+            </div>
+
+            <p>© 2026 Sentiments AI. Human-Centric Intelligence.</p>
+        </div>
+    </footer>
+
+    <!-- LÓGICA JAVASCRIPT Y SHADER WEBGL -->
+    <script>
+        lucide.createIcons();
+
+        // --- 1. SHADER WEBGL ---
+        const canvas = document.getElementById('emotional-pulse-canvas');
+        const gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            console.warn('WebGL no soportado');
+        } else {
+            const vsSource = `
+                attribute vec2 position;
+                void main() {
+                    gl_Position = vec4(position, 0.0, 1.0);
+                }
+            `;
+
+            const fsSource = `
+                precision mediump float;
+                uniform vec2 u_resolution;
+                uniform float u_time;
+                uniform float u_isDark;
+
+                vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+
+                float snoise(vec2 v){
+                    const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                             -0.577350269189626, 0.024390243902439);
+                    vec2 i  = floor(v + dot(v, C.yy) );
+                    vec2 x0 = v -   i + dot(i, C.xx);
+                    vec2 i1;
+                    i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+                    vec4 x12 = x0.xyxy + C.xxzz;
+                    x12.xy -= i1;
+                    i = mod(i, 289.0);
+                    vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+                    + i.x + vec3(0.0, i1.x, 1.0 ));
+                    vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+                    m = m*m ;
+                    m = m*m ;
+                    vec3 x = 2.0 * fract(p * C.www) - 1.0;
+                    vec3 h = abs(x) - 0.5;
+                    vec3 ox = floor(x + 0.5);
+                    vec3 a0 = x - ox;
+                    m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+                    vec3 g;
+                    g.x  = a0.x  * x0.x  + h.x  * x0.y;
+                    g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+                    return 130.0 * dot(m, g);
+                }
+
+                void main() {
+                    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+                    st.x *= u_resolution.x / u_resolution.y;
+
+                    float t = u_time * 0.12;
+                    float n1 = snoise(st * 1.2 + vec2(t * 0.2, t * 0.15));
+                    float n2 = snoise(st * 2.0 - vec2(t * 0.1, t * 0.25));
+
+                    float mixNoise = (n1 + n2) * 0.5;
+
+                    vec3 cBackground = (u_isDark > 0.5) ? vec3(0.02, 0.04, 0.09) : vec3(0.92, 0.94, 0.98);
+                    vec3 cPrimary = (u_isDark > 0.5) ? vec3(0.18, 0.12, 0.40) : vec3(0.82, 0.85, 0.96);
+                    vec3 cAccent = (u_isDark > 0.5) ? vec3(0.08, 0.16, 0.45) : vec3(0.88, 0.83, 0.96);
+
+                    vec3 color = mix(cBackground, cPrimary, smoothstep(-0.5, 0.8, mixNoise));
+                    color = mix(color, cAccent, smoothstep(0.0, 1.0, n2));
+
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `;
+
+            function createShader(gl, type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+                return shader;
+            }
+
+            const program = gl.createProgram();
+            gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vsSource));
+            gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fsSource));
+            gl.linkProgram(program);
+            gl.useProgram(program);
+
+            const buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                -1, -1, 1, -1, -1, 1,
+                -1, 1, 1, -1, 1, 1,
+            ]), gl.STATIC_DRAW);
+
+            const positionLoc = gl.getAttribLocation(program, "position");
+            gl.enableVertexAttribArray(positionLoc);
+            gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
+
+            const resolutionLoc = gl.getUniformLocation(program, "u_resolution");
+            const timeLoc = gl.getUniformLocation(program, "u_time");
+            const isDarkLoc = gl.getUniformLocation(program, "u_isDark");
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            let startTime = performance.now();
+            function render() {
+                const now = (performance.now() - startTime) * 0.001;
+                const isDark = document.documentElement.classList.contains('dark') ? 1.0 : 0.0;
+
+                gl.uniform2f(resolutionLoc, canvas.width, canvas.height);
+                gl.uniform1f(timeLoc, now);
+                gl.uniform1f(isDarkLoc, isDark);
+
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+                requestAnimationFrame(render);
+            }
+            requestAnimationFrame(render);
+        }
+
+        // --- 2. TRADUCCIONES ---
+        const translations = {
+            es: {
+                settingsTitle: "Ajustes",
+                languageLabel: "Idioma",
+                themeLabel: "Tema",
+                themeLight: "Claro",
+                themeDark: "Oscuro",
+                heroTitle: "Descubre el corazón de tu texto",
+                heroDesc: "Comprende el tono emocional tras las palabras. Clasificación de sentimientos multilingüe rápida mediante modelos NLP Transformer.",
+                inputTitle: "¿Cómo te sientes hoy?",
+                inputPlaceholder: "Pega tu texto aquí...",
+                btnAnalyze: "Analizar Sentimiento",
+                feat1Title: "Análisis Multilingüe",
+                feat1Desc: "Detección automática de idioma combinada con modelos Transformer ajustados (RoBERTuito y DistilBERT) para la precisión en inglés y español.",
+                feat2Title: "100% Anónimo",
+                feat2Desc: "Guardamos muestras de texto para mejorar la calidad del análisis, pero nunca rastreamos direcciones IP ni metadatos personales.",
+                feat3Title: "Pipeline en Tiempo Real",
+                feat3Desc: "Inferencia en GPU/CPU en menos de un segundo.",
+                feat4Title: "Encuentra la calma",
+                feat4Desc: "Análisis objetivo para tu tranquilidad mental.",
+                linkPrivacy: "Política de Privacidad",
+                linkTerms: "Términos de Servicio",
+                linkDocs: "Documentación API",
+                linkContact: "Contacto",
+                alertEmpty: "Por favor, escribe un texto para analizar.",
+                alertAnalyzing: "Analizando texto: "
+            },
+            en: {
+                settingsTitle: "Settings",
+                languageLabel: "Language",
+                themeLabel: "Theme",
+                themeLight: "Light",
+                themeDark: "Dark",
+                heroTitle: "Discover the heart of your text",
+                heroDesc: "Understand the emotional tone behind words. Fast, cross-language sentiment classification powered by transformer NLP models.",
+                inputTitle: "How are you feeling today?",
+                inputPlaceholder: "Paste your text here...",
+                btnAnalyze: "Analyze Sentiment",
+                feat1Title: "Multilingual Sentiment Analysis",
+                feat1Desc: "Automatic language detection paired with fine-tuned Transformer models (RoBERTuito & DistilBERT) for accurate polarity detection in English and Spanish.",
+                feat2Title: "100% Anonymous",
+                feat2Desc: "We store text samples for analysis quality, but never track IP addresses or personal identifiable metadata.",
+                feat3Title: "Real-time Pipeline",
+                feat3Desc: "Sub-second GPU/CPU inference.",
+                feat4Title: "Find your calm",
+                feat4Desc: "Objective analysis for peace of mind.",
+                linkPrivacy: "Privacy Policy",
+                linkTerms: "Terms of Service",
+                linkDocs: "API Documentation",
+                linkContact: "Contact Us",
+                alertEmpty: "Please enter some text to analyze.",
+                alertAnalyzing: "Analyzing text: "
+            }
+        };
+
+        let currentLang = 'es';
+
+        // --- 3. CONTROL DEL MENÚ DE AJUSTES ---
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsMenu = document.getElementById('settingsMenu');
+
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsMenu.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            // Si el clic NO fue dentro del menú NI en el botón de ajustes, lo cerramos
+            const isClickInsideMenu = settingsMenu.contains(e.target) || e.target.closest('#settingsMenu');
+            const isClickOnBtn = settingsBtn.contains(e.target) || e.target.closest('#settingsBtn');
+
+            if (!isClickInsideMenu && !isClickOnBtn) {
+                settingsMenu.classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            // Se usa .closest() para comprobar con precisión si el clic fue dentro de los controles
+            if (!settingsMenu.contains(e.target) && !e.target.closest('#settingsBtn')) {
+                settingsMenu.classList.add('hidden');
+            }
+        });
+
+        // --- 4. CONMUTADOR DE TEMA ---
+        const themeLightBtn = document.getElementById('themeLightBtn');
+        const themeDarkBtn = document.getElementById('themeDarkBtn');
+
+        function setTheme(isDark) {
+            const html = document.documentElement;
+
+            if (isDark) {
+                html.classList.add('dark');
+
+                // Estilos Botón Oscuro Activo
+                themeDarkBtn.className = "flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all text-white bg-slate-700 shadow-sm";
+
+                // Estilos Botón Claro Inactivo
+                themeLightBtn.className = "flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-500 dark:text-slate-400 bg-transparent hover:text-slate-900 dark:hover:text-white";
+            } else {
+                html.classList.remove('dark');
+
+                // Estilos Botón Claro Activo
+                themeLightBtn.className = "flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-white text-slate-900 shadow-sm";
+
+                // Estilos Botón Oscuro Inactivo
+                themeDarkBtn.className = "flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-500 bg-transparent hover:text-slate-900";
+            }
+        }
+
+        themeLightBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setTheme(false);
+        });
+
+        themeDarkBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setTheme(true);
+        });
+
+        // --- 5. CAMBIO DE IDIOMA ---
+        const langSelect = document.getElementById('langSelect');
+
+        langSelect.addEventListener('click', (e) => e.stopPropagation());
+
+        langSelect.addEventListener('change', (e) => {
+            e.stopPropagation(); // Stop propagation aquí también
+            setLanguage(e.target.value);
+        });
+
+        // --- 6. EVENTO ANALIZAR ---
+        document.getElementById('analyzeBtn').addEventListener('click', () => {
+            const text = document.getElementById('sentimentInput').value;
+            const dict = translations[currentLang];
+            if (text.trim() === '') {
+                alert(dict.alertEmpty);
+            } else {
+                alert(dict.alertAnalyzing + '"' + text + '"');
+            }
+        });
+    </script>
+</body>
+
+</html>

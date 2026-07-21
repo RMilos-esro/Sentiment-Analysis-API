@@ -3,8 +3,8 @@ from transformers import pipeline
 
 DetectorFactory.seed = 0
 SPANISH_LABEL_MAP = {
-    "POS": "POSITIVO",
-    "NEG": "NEGATIVO",
+    "POS": "POSITIVE",
+    "NEG": "NEGATIVE",
     "NEU": "NEUTRAL"
 }
 
