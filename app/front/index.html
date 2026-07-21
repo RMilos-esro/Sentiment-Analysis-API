@@ -38,6 +38,55 @@
             backdrop-filter: blur(28px);
             -webkit-backdrop-filter: blur(28px);
         }
+
+        /* --- Tema dinámico según el resultado del sentimiento --- */
+        :root, html {
+            --theme-accent: #4f46e5;      /* indigo por defecto */
+            --theme-accent-soft: rgba(79, 70, 229, 0.14);
+            --theme-glow: rgba(79, 70, 229, 0.35);
+        }
+
+        html[data-theme="positive"] {
+            --theme-accent: #10b981;
+            --theme-accent-soft: rgba(16, 185, 129, 0.14);
+            --theme-glow: rgba(16, 185, 129, 0.35);
+        }
+
+        html[data-theme="negative"] {
+            --theme-accent: #f43f5e;
+            --theme-accent-soft: rgba(244, 63, 94, 0.14);
+            --theme-glow: rgba(244, 63, 94, 0.35);
+        }
+
+        html[data-theme="neutral"] {
+            --theme-accent: #f59e0b;
+            --theme-accent-soft: rgba(245, 158, 11, 0.14);
+            --theme-glow: rgba(245, 158, 11, 0.35);
+        }
+
+        #analyzeBtn {
+            background-color: var(--theme-accent);
+            box-shadow: 0 10px 30px -8px var(--theme-glow);
+            transition: background-color 0.5s ease, box-shadow 0.5s ease, transform 0.2s ease, opacity 0.3s ease;
+        }
+
+        #analyzeBtn:hover:not(:disabled) {
+            filter: brightness(0.93);
+        }
+
+        #progressRingFill {
+            stroke: var(--theme-accent);
+        }
+
+        #resultIconWrap {
+            background-color: var(--theme-accent-soft);
+            color: var(--theme-accent);
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        #charCounter.char-limit-warn {
+            color: var(--theme-accent);
+        }
     </style>
 </head>
 
@@ -142,17 +191,51 @@
                 ¿Cómo te sientes hoy?
             </h2>
             <div class="relative">
-                <textarea id="sentimentInput" rows="5"
+                <textarea id="sentimentInput" rows="5" maxlength="255"
                     class="w-full bg-slate-100/90 dark:bg-slate-950/70 backdrop-blur-sm rounded-2xl p-4 text-slate-900 dark:text-slate-100 font-medium text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 border border-slate-200/80 dark:border-slate-800 resize-none transition-all"
                     data-i18n-placeholder="inputPlaceholder" placeholder="Pega tu texto aquí..."></textarea>
+                <div class="mt-2 flex justify-between items-center px-1">
+                    <span id="minCharHint" class="text-[11px] font-medium text-slate-400 dark:text-slate-500"
+                        data-i18n="minCharHint">Mínimo 10 caracteres</span>
+                    <span id="charCounter" class="text-[11px] font-semibold tabular-nums text-slate-400 dark:text-slate-500">0 / 255</span>
+                </div>
             </div>
 
-            <div class="mt-6 flex justify-center">
+            <div class="mt-2 flex justify-center">
                 <button id="analyzeBtn"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-3.5 rounded-full flex items-center gap-2.5 shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-3.5 rounded-full flex items-center gap-2.5 shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">
                     <i data-lucide="sparkles" class="w-4 h-4 pointer-events-none"></i>
                     <span data-i18n="btnAnalyze">Analizar Sentimiento</span>
                 </button>
+            </div>
+
+            <!-- Resultado del Análisis -->
+            <div id="resultPanel" class="hidden mt-8 pt-8 border-t border-slate-200/70 dark:border-slate-800/70">
+                <div class="flex flex-col sm:flex-row items-center gap-6 justify-center">
+                    <div class="relative w-32 h-32 shrink-0">
+                        <svg id="progressRing" viewBox="0 0 120 120" class="w-32 h-32 -rotate-90">
+                            <circle cx="60" cy="60" r="52" fill="none" stroke-width="10"
+                                class="stroke-slate-200 dark:stroke-slate-800" />
+                            <circle id="progressRingFill" cx="60" cy="60" r="52" fill="none" stroke-width="10"
+                                stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                                style="transition: stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.6s ease;" />
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span id="resultScore" class="text-2xl font-black text-slate-950 dark:text-white">0%</span>
+                            <span id="resultLangBadge"
+                                class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">—</span>
+                        </div>
+                    </div>
+                    <div class="text-center sm:text-left">
+                        <div id="resultIconWrap"
+                            class="inline-flex items-center justify-center w-9 h-9 rounded-xl mb-2">
+                            <i id="resultIcon" data-lucide="smile" class="w-5 h-5 pointer-events-none"></i>
+                        </div>
+                        <h3 id="resultLabel" class="text-xl font-extrabold text-slate-950 dark:text-white mb-1">—</h3>
+                        <p id="resultCaption" class="text-xs font-medium text-slate-600 dark:text-slate-400 max-w-xs">
+                        </p>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -291,6 +374,8 @@
                 uniform vec2 u_resolution;
                 uniform float u_time;
                 uniform float u_isDark;
+                uniform vec3 u_themeColor;
+                uniform float u_themeMix;
 
                 vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
 
@@ -337,6 +422,9 @@
                     vec3 color = mix(cBackground, cPrimary, smoothstep(-0.5, 0.8, mixNoise));
                     color = mix(color, cAccent, smoothstep(0.0, 1.0, n2));
 
+                    float pulse = 0.55 + 0.45 * n2;
+                    color = mix(color, u_themeColor, u_themeMix * 0.4 * pulse);
+
                     gl_FragColor = vec4(color, 1.0);
                 }
             `;
@@ -368,6 +456,17 @@
             const resolutionLoc = gl.getUniformLocation(program, "u_resolution");
             const timeLoc = gl.getUniformLocation(program, "u_time");
             const isDarkLoc = gl.getUniformLocation(program, "u_isDark");
+            const themeColorLoc = gl.getUniformLocation(program, "u_themeColor");
+            const themeMixLoc = gl.getUniformLocation(program, "u_themeMix");
+
+            // Estado del "pulso emocional": color objetivo + intensidad objetivo,
+            // interpolados cada frame para una transición suave al recibir un resultado.
+            window.__emotionalPulse = {
+                color: [0.31, 0.28, 0.90],
+                targetColor: [0.31, 0.28, 0.90],
+                mix: 0,
+                targetMix: 0
+            };
 
             function resize() {
                 canvas.width = window.innerWidth;
@@ -382,9 +481,18 @@
                 const now = (performance.now() - startTime) * 0.001;
                 const isDark = document.documentElement.classList.contains('dark') ? 1.0 : 0.0;
 
+                // Interpola suavemente hacia el color/intensidad objetivo del sentimiento
+                const pulse = window.__emotionalPulse;
+                for (let i = 0; i < 3; i++) {
+                    pulse.color[i] += (pulse.targetColor[i] - pulse.color[i]) * 0.04;
+                }
+                pulse.mix += (pulse.targetMix - pulse.mix) * 0.04;
+
                 gl.uniform2f(resolutionLoc, canvas.width, canvas.height);
                 gl.uniform1f(timeLoc, now);
                 gl.uniform1f(isDarkLoc, isDark);
+                gl.uniform3f(themeColorLoc, pulse.color[0], pulse.color[1], pulse.color[2]);
+                gl.uniform1f(themeMixLoc, pulse.mix);
 
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
                 requestAnimationFrame(render);
@@ -415,7 +523,15 @@
                 linkDocs: "Documentación API",
                 linkContact: "Contacto",
                 alertEmpty: "Por favor, escribe un texto para analizar.",
-                alertAnalyzing: "Analizando texto: "
+                alertAnalyzing: "Analizando texto: ",
+                minCharHint: "Mínimo 10 caracteres",
+                errorTooShort: "Escribe al menos 10 caracteres.",
+                errorGeneric: "Error al analizar el texto",
+                errorConnection: "No se pudo conectar con el servidor",
+                resultPOSITIVE: { label: "Positivo", caption: "El texto transmite un tono predominantemente positivo." },
+                resultNEGATIVE: { label: "Negativo", caption: "El texto transmite un tono predominantemente negativo." },
+                resultNEUTRAL: { label: "Neutral", caption: "El texto transmite un tono equilibrado o neutro." },
+                langBadge: { es: "Español", en: "Inglés" }
             },
             en: {
                 settingsTitle: "Settings",
@@ -438,7 +554,15 @@
                 linkDocs: "API Documentation",
                 linkContact: "Contact Us",
                 alertEmpty: "Please enter some text to analyze.",
-                alertAnalyzing: "Analyzing text: "
+                alertAnalyzing: "Analyzing text: ",
+                minCharHint: "10 characters minimum",
+                errorTooShort: "Write at least 10 characters.",
+                errorGeneric: "Error analyzing the text",
+                errorConnection: "Could not connect to the server",
+                resultPOSITIVE: { label: "Positive", caption: "The text conveys a predominantly positive tone." },
+                resultNEGATIVE: { label: "Negative", caption: "The text conveys a predominantly negative tone." },
+                resultNEUTRAL: { label: "Neutral", caption: "The text conveys a balanced, neutral tone." },
+                langBadge: { es: "Spanish", en: "English" }
             }
         };
 
@@ -503,19 +627,115 @@
             });
 
             langSelect.value = lang;
+
+            if (window.__lastResultForLang) {
+                window.__lastResultForLang();
+            }
         }
 
-        // --- 5. EVENTO ANALIZAR ---
-        const API_URL = "https://sentiment-analysis-api-zia3.onrender.com"; // cámbialo por tu URL real
+        // --- 5. LÍMITE DE CARACTERES ---
+        // El backend (SentimentCreate) exige min_length=10, max_length=255,
+        // así que replicamos ese mismo rango en el cliente.
+        const MIN_CHARS = 10;
+        const MAX_CHARS = 255;
 
-        document.getElementById('analyzeBtn').addEventListener('click', async () => {
-            const text = document.getElementById('sentimentInput').value;
+        const sentimentInput = document.getElementById('sentimentInput');
+        const charCounter = document.getElementById('charCounter');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        function updateCharCounter() {
+            const len = sentimentInput.value.length;
+            charCounter.textContent = `${len} / ${MAX_CHARS}`;
+            charCounter.classList.toggle('char-limit-warn', len >= MAX_CHARS - 15);
+        }
+        sentimentInput.addEventListener('input', updateCharCounter);
+        updateCharCounter();
+
+        // --- 6. TEMA POR SENTIMIENTO (colores CSS + pulso del shader) ---
+        const THEME_RGB = {
+            positive: [0.06, 0.72, 0.51],
+            negative: [0.96, 0.25, 0.37],
+            neutral: [0.96, 0.62, 0.04]
+        };
+
+        const RESULT_ICON = {
+            positive: 'smile',
+            negative: 'frown',
+            neutral: 'meh'
+        };
+
+        function applySentimentTheme(sentimentKey) {
+            document.documentElement.setAttribute('data-theme', sentimentKey);
+            if (window.__emotionalPulse) {
+                window.__emotionalPulse.targetColor = THEME_RGB[sentimentKey];
+                window.__emotionalPulse.targetMix = 0.85;
+            }
+        }
+
+        // --- 7. EVENTO ANALIZAR ---
+        const API_URL = "https://sentiment-analysis-api-zia3.onrender.com"; // cámbialo por tu URL real
+        const RING_CIRCUMFERENCE = 2 * Math.PI * 52; // r=52 en el SVG del anillo
+
+        const resultPanel = document.getElementById('resultPanel');
+        const progressRingFill = document.getElementById('progressRingFill');
+        const resultScore = document.getElementById('resultScore');
+        const resultLangBadge = document.getElementById('resultLangBadge');
+        const resultLabel = document.getElementById('resultLabel');
+        const resultCaption = document.getElementById('resultCaption');
+        let resultIcon = document.getElementById('resultIcon');
+        const resultIconWrap = document.getElementById('resultIconWrap');
+
+        let lastResult = null; // guarda el último resultado para poder re-renderizar al cambiar idioma
+
+        function renderResult(sentimentKey, score, language) {
+            const dict = translations[currentLang];
+            const copy = dict[`result${sentimentKey.toUpperCase()}`];
+
+            resultPanel.classList.remove('hidden');
+
+            // Anillo de progreso: dashoffset 0 = 100% relleno
+            const offset = RING_CIRCUMFERENCE * (1 - score);
+            // fuerza reflow antes de animar para que la transición CSS se dispare
+            progressRingFill.style.strokeDasharray = `${RING_CIRCUMFERENCE}`;
+            requestAnimationFrame(() => {
+                progressRingFill.style.strokeDashoffset = `${offset}`;
+            });
+
+            resultScore.textContent = `${Math.round(score * 100)}%`;
+            resultLangBadge.textContent = dict.langBadge[language] || language.toUpperCase();
+            resultLabel.textContent = copy.label;
+            resultCaption.textContent = copy.caption;
+
+            resultIcon.setAttribute('data-lucide', RESULT_ICON[sentimentKey]);
+            lucide.createIcons();
+            // lucide reemplaza el nodo por uno nuevo: refrescamos la referencia
+            resultIcon = document.getElementById('resultIcon');
+
+            applySentimentTheme(sentimentKey);
+        }
+
+        window.__lastResultForLang = () => {
+            if (lastResult) {
+                renderResult(lastResult.sentimentKey, lastResult.score, lastResult.language);
+            }
+        };
+
+        analyzeBtn.addEventListener('click', async () => {
+            const text = sentimentInput.value;
             const dict = translations[currentLang];
 
             if (text.trim() === '') {
                 alert(dict.alertEmpty);
                 return;
             }
+            if (text.trim().length < MIN_CHARS) {
+                alert(dict.errorTooShort);
+                return;
+            }
+
+            analyzeBtn.disabled = true;
+            const originalContent = analyzeBtn.innerHTML;
+            analyzeBtn.innerHTML = `<span>${dict.alertAnalyzing.replace(':', '').trim()}…</span>`;
 
             try {
                 const response = await fetch(`${API_URL}/analyze`, {
@@ -523,20 +743,26 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ text: text })
+                    body: JSON.stringify({ text: text.slice(0, MAX_CHARS) })
                 });
 
                 if (!response.ok) {
-                    const err = await response.json();
-                    alert(err.detail || 'Error al analizar el texto');
+                    const err = await response.json().catch(() => ({}));
+                    alert(err.detail || dict.errorGeneric);
                     return;
                 }
 
                 const result = await response.json();
-                alert(`Sentimiento: ${result.sentiment} (${result.score}) — idioma: ${result.language}`);
+                const sentimentKey = (result.sentiment || 'neutral').toLowerCase();
+                lastResult = { sentimentKey, score: result.score, language: result.language };
+                renderResult(sentimentKey, result.score, result.language);
             } catch (error) {
                 console.error(error);
-                alert('No se pudo conectar con el servidor');
+                alert(dict.errorConnection);
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = originalContent;
+                lucide.createIcons();
             }
         });
     </script>
