@@ -506,13 +506,33 @@
         }
 
         // --- 5. EVENTO ANALIZAR ---
-        document.getElementById('analyzeBtn').addEventListener('click', () => {
+        const API_URL = "https://sentiment-analysis-api-zia3.onrender.com"; // cámbialo por tu URL real
+
+        document.getElementById('analyzeBtn').addEventListener('click', async () => {
             const text = document.getElementById('sentimentInput').value;
             const dict = translations[currentLang];
+
             if (text.trim() === '') {
                 alert(dict.alertEmpty);
-            } else {
-                alert(dict.alertAnalyzing + '"' + text + '"');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/analyze?text=${encodeURIComponent(text)}`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    alert(err.detail || 'Error al analizar el texto');
+                    return;
+                }
+
+                const result = await response.json();
+                alert(`Sentimiento: ${result.sentiment} (${result.score}) — idioma: ${result.language}`);
+            } catch (error) {
+                console.error(error);
+                alert('No se pudo conectar con el servidor');
             }
         });
     </script>
