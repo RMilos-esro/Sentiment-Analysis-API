@@ -80,7 +80,7 @@
 
         <!-- Controles Derecha -->
         <div class="flex items-center gap-1 relative">
-            <!-- Botón Settings (se añade pointer-events-none al icono para fijar la zona de click) -->
+            <!-- Botón Settings -->
             <button id="settingsBtn"
                 class="text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white transition-colors p-2.5 rounded-xl bg-white/60 dark:bg-slate-900/60 hover:bg-white/90 dark:hover:bg-slate-800/80 border border-slate-200/60 dark:border-slate-800/80 backdrop-blur-md shadow-sm">
                 <i data-lucide="settings" class="w-5 h-5 pointer-events-none"></i>
@@ -481,8 +481,9 @@
             settingsMenu.classList.toggle('hidden');
         });
 
+        // BUGFIX: antes había DOS listeners idénticos registrados en 'document'
+        // (código duplicado). Se deja uno solo.
         document.addEventListener('click', (e) => {
-            // Si el clic NO fue dentro del menú NI en el botón de ajustes, lo cerramos
             const isClickInsideMenu = settingsMenu.contains(e.target) || e.target.closest('#settingsMenu');
             const isClickOnBtn = settingsBtn.contains(e.target) || e.target.closest('#settingsBtn');
 
@@ -491,37 +492,19 @@
             }
         });
 
-        document.addEventListener('click', (e) => {
-            // Se usa .closest() para comprobar con precisión si el clic fue dentro de los controles
-            if (!settingsMenu.contains(e.target) && !e.target.closest('#settingsBtn')) {
-                settingsMenu.classList.add('hidden');
-            }
-        });
-
         // --- 4. CONMUTADOR DE TEMA ---
         const themeLightBtn = document.getElementById('themeLightBtn');
         const themeDarkBtn = document.getElementById('themeDarkBtn');
 
+        // BUGFIX (bug 1): antes esta función reescribía a mano el "className"
+        // completo de los dos botones. Esas clases ya estaban originalmente bien
+        // definidas usando los modificadores "dark:" de Tailwind, así que
+        // sobreescribirlas era redundante y frágil (con cada clic las cadenas
+        // podían desincronizarse). Ahora solo se alterna la clase "dark" en
+        // <html>; el propio CSS (dark:bg-transparent, dark:bg-slate-700, etc.)
+        // ya se encarga de resaltar el botón activo en ambos sentidos.
         function setTheme(isDark) {
-            const html = document.documentElement;
-
-            if (isDark) {
-                html.classList.add('dark');
-
-                // Estilos Botón Oscuro Activo
-                themeDarkBtn.className = "flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all text-white bg-slate-700 shadow-sm";
-
-                // Estilos Botón Claro Inactivo
-                themeLightBtn.className = "flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-500 dark:text-slate-400 bg-transparent hover:text-slate-900 dark:hover:text-white";
-            } else {
-                html.classList.remove('dark');
-
-                // Estilos Botón Claro Activo
-                themeLightBtn.className = "flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-white text-slate-900 shadow-sm";
-
-                // Estilos Botón Oscuro Inactivo
-                themeDarkBtn.className = "flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-500 bg-transparent hover:text-slate-900";
-            }
+            document.documentElement.classList.toggle('dark', isDark);
         }
 
         themeLightBtn.addEventListener('click', (e) => {
@@ -537,12 +520,43 @@
         // --- 5. CAMBIO DE IDIOMA ---
         const langSelect = document.getElementById('langSelect');
 
-        langSelect.addEventListener('click', (e) => e.stopPropagation());
-
+        // BUGFIX (bug 3): se ha quitado el listener "click -> stopPropagation()"
+        // sobre el <select>. Era innecesario (el listener de "document" ya
+        // reconoce que el clic ocurre dentro de #settingsMenu gracias a
+        // settingsMenu.contains(e.target)) y podía interferir con la apertura
+        // nativa del desplegable en algunos navegadores.
         langSelect.addEventListener('change', (e) => {
-            e.stopPropagation(); // Stop propagation aquí también
             setLanguage(e.target.value);
         });
+
+        // BUGFIX (bug 2): la función setLanguage() se llamaba pero nunca
+        // existía en el script, así que cambiar de idioma no hacía nada
+        // (y lanzaba un ReferenceError en consola). Aquí queda implementada:
+        // recorre todos los elementos con data-i18n / data-i18n-placeholder
+        // y actualiza su texto según el diccionario de "translations".
+        function setLanguage(lang) {
+            const dict = translations[lang];
+            if (!dict) return;
+
+            currentLang = lang;
+            document.documentElement.lang = lang;
+
+            document.querySelectorAll('[data-i18n]').forEach((el) => {
+                const key = el.getAttribute('data-i18n');
+                if (dict[key] !== undefined) {
+                    el.textContent = dict[key];
+                }
+            });
+
+            document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (dict[key] !== undefined) {
+                    el.setAttribute('placeholder', dict[key]);
+                }
+            });
+
+            langSelect.value = lang;
+        }
 
         // --- 6. EVENTO ANALIZAR ---
         document.getElementById('analyzeBtn').addEventListener('click', () => {

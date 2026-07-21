@@ -4,11 +4,11 @@ from fastapi import FastAPI, HTTPException
 from sqlalchemy import Text, text
 import uvicorn
 from datetime import datetime, timezone
-from db.schemas import SentimentCreate
-from db.models import SentimentModel
+from app.db.schemas import SentimentCreate
+from app.db.models import SentimentModel
 from config import DATABASE_URL 
-from db.database import AsyncSessionLocal 
-from nlp.sentiment import analyze_sentiment_by_lang
+from app.db.database import AsyncSessionLocal 
+from app.nlp.sentiment import analyze_sentiment_by_lang
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Sentiment Analysis API")
