@@ -1,9 +1,8 @@
-fastapi==0.139.2
-langdetect==1.0.9
-pydantic==2.13.4
-python-dotenv==1.2.2
-SQLAlchemy==2.0.51
-transformers==5.14.1
-uvicorn==0.51.0
+fastapi
+uvicorn
+sqlalchemy
 asyncpg
-torch
+pydantic
+python-dotenv
+langdetect
+huggingface_hub

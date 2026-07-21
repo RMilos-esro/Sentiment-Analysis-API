@@ -1,60 +1,42 @@
+# app/nlp/sentiment.py
 from langdetect import detect, DetectorFactory, LangDetectException
-from transformers import pipeline
+from huggingface_hub import InferenceClient
+from app.config import HF_TOKEN
 
 DetectorFactory.seed = 0
-SPANISH_LABEL_MAP = {
-    "POS": "POSITIVE",
-    "NEG": "NEGATIVE",
-    "NEU": "NEUTRAL"
-}
+client = InferenceClient(token=HF_TOKEN)
 
-# Spanish model (RoBERTuito)
-nlp_es = pipeline(
-    "sentiment-analysis", 
-    model="pysentimiento/robertuito-sentiment-analysis"
-)
+SPANISH_LABEL_MAP = {"POS": "POSITIVE", "NEG": "NEGATIVE", "NEU": "NEUTRAL"}
 
-# English model (DistilBERT)
-nlp_en = pipeline(
-    "sentiment-analysis", 
-    model="distilbert-base-uncased-finetuned-sst-2-english"
-)
-
+MODEL_ES = "pysentimiento/robertuito-sentiment-analysis"
+MODEL_EN = "distilbert-base-uncased-finetuned-sst-2-english"
 
 def detect_language(text: str) -> str:
-    """Detects the language of the input text."""
     try:
-        lang = detect(text)
-        return lang
+        return detect(text)
     except LangDetectException:
         return "unknown"
 
-
 def analyze_sentiment_by_lang(text: str) -> dict:
-    """Detects the language and analyzes the sentiment using the appropriate model."""
     lang = detect_language(text)
 
-    # if spanish
-    if lang == "es":
-        prediction = nlp_es(text)[0]
-
-    # if english
-    elif lang == "en":
-        prediction = nlp_en(text)[0]
-    else:
-        # else fallback
+    if lang not in ("es", "en"):
         return {
             "language": lang,
             "supported": False,
             "error": f"'{lang}' not supported. Please send text in English or Spanish."
         }
 
-    if lang == "es" and prediction["label"] in SPANISH_LABEL_MAP:
-        prediction["label"] = SPANISH_LABEL_MAP[prediction["label"]]
+    model = MODEL_ES if lang == "es" else MODEL_EN
+    result = client.text_classification(text, model=model)[0]  # {"label": ..., "score": ...}
+
+    label = result["label"]
+    if lang == "es" and label in SPANISH_LABEL_MAP:
+        label = SPANISH_LABEL_MAP[label]
 
     return {
         "language": lang,
         "supported": True,
-        "label": prediction["label"],  
-        "score": round(prediction["score"], 4)  
+        "label": label,
+        "score": round(result["score"], 4)
     }
